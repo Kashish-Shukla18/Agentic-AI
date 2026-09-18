@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from langgraph.graph.message import add_messages
 from langchain_core.messages import BaseMessage
 from langchain_core.messages import SystemMessage, HumanMessage
-from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.memory import SQLiteSaver
 
 load_dotenv()
 
@@ -25,7 +25,10 @@ def chatNode(state:ChatState):
     response=model.invoke(messages)
     return {"messages":response}
 
-checkpointer=MemorySaver()
+import sqlite3
+conn=sqlite3.connect(database="chatbot.db",check_same_thread=False)
+
+checkpointer=SQLiteSaver(conn=conn)
 
 graph=StateGraph(ChatState)
 
@@ -34,9 +37,3 @@ graph.add_edge(START,"chatNode")
 graph.add_edge("chatNode",END)
 
 chatbot=graph.compile(checkpointer=checkpointer)
-
-def retrieve_all_threads():
-    all_threads=set()
-    for checkpoint in checkpointer.list(None):
-        all_threads.add(checkpoint['configurable']['thread_id'])
-    return list(all_threads)
